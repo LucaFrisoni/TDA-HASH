@@ -32,10 +32,12 @@ size_t funcion_hash(const char *clave)
 	return hash;
 }
 
-nodo_t *buscar_nodo_y_anterior(nodo_t *inicio, const char *clave,
-			       nodo_t **nodo_anterior)
+nodo_t *buscando_nodo_y_anterior(hash_t *hash, const char *clave,
+				 nodo_t **nodo_anterior, size_t *indice_ref)
 {
-	nodo_t *nodo_actual = inicio;
+	size_t indice = funcion_hash(clave) % hash->capacidad;
+
+	nodo_t *nodo_actual = hash->buckets[indice];
 	nodo_t *anterior = NULL;
 
 	while (nodo_actual) {
@@ -45,50 +47,12 @@ nodo_t *buscar_nodo_y_anterior(nodo_t *inicio, const char *clave,
 		nodo_actual = nodo_actual->siguiente;
 	}
 
-	*nodo_anterior = anterior;
-	return nodo_actual; //Puede ser NULL
-}
-
-void quitando_nodo(hash_t *hash, size_t indice, nodo_t *nodo_encontrado,
-		   nodo_t *nodo_anterior)
-{
-	// Caso nodo en el medio o al final
 	if (nodo_anterior)
-		nodo_anterior->siguiente = nodo_encontrado->siguiente;
-	// Caso primer nodo del bucket
-	else
-		hash->buckets[indice] = nodo_encontrado->siguiente;
-
-	hash->cantidad--;
-}
-
-nodo_t *obtener_o_quitar_nodo(hash_t *hash, const char *clave, bool quitar,
-			      bool devolver_ultimo, size_t *indice_ref)
-{
-	if (!hash || !clave)
-		return NULL;
-
-	size_t indice = funcion_hash(clave) % hash->capacidad;
+		*nodo_anterior = anterior;
 	if (indice_ref)
 		*indice_ref = indice;
 
-	nodo_t *nodo_actual = hash->buckets[indice];
-	nodo_t *nodo_anterior = NULL;
-
-	nodo_t *nodo_encontrado =
-		buscar_nodo_y_anterior(nodo_actual, clave, &nodo_anterior);
-
-	if (nodo_encontrado && quitar)
-		quitando_nodo(hash, indice, nodo_encontrado, nodo_anterior);
-
-	if (nodo_encontrado)
-		return nodo_actual; // Nodo con clave encontrada
-
-	// Si no se encontró y se pidió último, devolvemos nodo_anterior
-	if (devolver_ultimo)
-		return nodo_anterior;
-
-	return NULL;
+	return nodo_actual;
 }
 // --------------------------------------------------------------------------------------------------------Funciones de Hash
 nodo_t *creando_nodo(char *clave, void *valor)
@@ -154,7 +118,7 @@ size_t hash_cantidad(hash_t *hash)
 // --------------------------------------------------------------------------------------------------
 bool hash_necesita_rehash(hash_t *hash)
 {
-	return (double)hash->cantidad / (double)hash->capacidad > FACTOR_MAX;
+	return ((double)hash->cantidad / (double)hash->capacidad) > FACTOR_MAX;
 }
 
 void reinsertar_nodos(hash_t *hash, nodo_t **buckets_nuevos,
@@ -200,7 +164,7 @@ bool hash_rehash(hash_t *hash)
 	return true;
 }
 
-bool insertar_nodo(hash_t *hash, nodo_t *nodo_encontrado, size_t indice,
+bool insertar_nodo(hash_t *hash, nodo_t *nodo_anterior, size_t indice,
 		   char *clave, void *valor, void **encontrado)
 {
 	nodo_t *nuevo_nodo = creando_nodo(clave, valor);
@@ -208,10 +172,10 @@ bool insertar_nodo(hash_t *hash, nodo_t *nodo_encontrado, size_t indice,
 		return false;
 
 	//Inserto nodo
-	if (!nodo_encontrado)
+	if (!nodo_anterior)
 		hash->buckets[indice] = nuevo_nodo;
 	else
-		nodo_encontrado->siguiente = nuevo_nodo;
+		nodo_anterior->siguiente = nuevo_nodo;
 
 	if (encontrado)
 		*encontrado = NULL;
@@ -236,48 +200,72 @@ bool hash_insertar(hash_t *hash, char *clave, void *valor, void **encontrado)
 {
 	if (!hash || !clave)
 		return false;
-	size_t indice = 0;
-	nodo_t *nodo_encontrado =
-		obtener_o_quitar_nodo(hash, clave, false, true, &indice);
 
-	if (!nodo_encontrado) {
-		return insertar_nodo(hash, nodo_encontrado, indice, clave,
-				     valor, encontrado);
-	} else if (strcmp(nodo_encontrado->clave, clave) != 0) {
-		return insertar_nodo(hash, nodo_encontrado, indice, clave,
-				     valor, encontrado);
-	} else {
+	size_t indice = 0;
+	nodo_t *nodo_anterior = NULL;
+
+	nodo_t *nodo_encontrado =
+		buscando_nodo_y_anterior(hash, clave, &nodo_anterior, &indice);
+
+	//Si encuentra un nodo significa que la clave coincide
+	if (nodo_encontrado)
 		return caso_clave_existente(nodo_encontrado, valor, encontrado);
-	}
+
+	return insertar_nodo(hash, nodo_anterior, indice, clave, valor,
+			     encontrado);
 }
 // --------------------------------------------------------------------------------------------------
 void *hash_buscar(hash_t *hash, char *clave)
 {
+	if (!hash || !clave)
+		return NULL;
+
 	nodo_t *nodo_encontrado =
-		obtener_o_quitar_nodo(hash, clave, false, false, NULL);
+		buscando_nodo_y_anterior(hash, clave, NULL, NULL);
 	return nodo_encontrado ? nodo_encontrado->valor : NULL;
 }
 // --------------------------------------------------------------------------------------------------
 bool hash_contiene(hash_t *hash, char *clave)
 {
-	return obtener_o_quitar_nodo(hash, clave, false, false, NULL) != NULL;
+	if (!hash || !clave)
+		return false;
+	return buscando_nodo_y_anterior(hash, clave, NULL, NULL) != NULL;
 }
 // --------------------------------------------------------------------------------------------------
+void *quitando_nodo_y_devolviendo_valor(hash_t *hash, size_t indice,
+					nodo_t *nodo_encontrado,
+					nodo_t *nodo_anterior)
+{
+	// Caso nodo en el medio o al final
+	if (nodo_anterior)
+		nodo_anterior->siguiente = nodo_encontrado->siguiente;
+	// Caso primer nodo del bucket
+	else
+		hash->buckets[indice] = nodo_encontrado->siguiente;
+
+	void *valor = nodo_encontrado->valor;
+	free(nodo_encontrado);
+	hash->cantidad--;
+	return valor;
+}
+
 void *hash_quitar(hash_t *hash, char *clave)
 {
 	if (!hash || !clave)
 		return NULL;
-	nodo_t *nodo_encontrado =
-		obtener_o_quitar_nodo(hash, clave, true, false, NULL);
 
-	if (nodo_encontrado) {
-		void *valor = nodo_encontrado->valor;
-		free(nodo_encontrado);
-		return valor;
-	}
+	size_t indice = 0;
+	nodo_t *nodo_anterior = NULL;
+
+	nodo_t *nodo_encontrado =
+		buscando_nodo_y_anterior(hash, clave, &nodo_anterior, &indice);
+
+	if (nodo_encontrado)
+		return quitando_nodo_y_devolviendo_valor(
+			hash, indice, nodo_encontrado, nodo_anterior);
+
 	return NULL;
 }
-
 // --------------------------------------------------------------------------------------------------
 size_t hash_iterar(hash_t *hash, bool (*f)(char *, void *, void *), void *ctx)
 {
