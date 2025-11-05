@@ -125,7 +125,9 @@ void reinsertar_nodos(hash_t *hash, nodo_t **buckets_nuevos,
 		      size_t capacidad_nueva)
 {
 	nodo_t **buckets_viejos = hash->buckets;
-	for (size_t i = 0; i < hash->capacidad; i++) {
+	size_t i;
+
+	for (i = 0; i < hash->capacidad; i++) {
 		nodo_t *nodo_actual = buckets_viejos[i];
 		while (nodo_actual) {
 			nodo_t *nodo_siguiente = nodo_actual->siguiente;
@@ -181,8 +183,10 @@ bool insertar_nodo(hash_t *hash, nodo_t *nodo_anterior, size_t indice,
 		*encontrado = NULL;
 
 	hash->cantidad++;
+
 	if (hash_necesita_rehash(hash))
 		return hash_rehash(hash);
+
 	return true;
 }
 
@@ -211,7 +215,12 @@ bool hash_insertar(hash_t *hash, char *clave, void *valor, void **encontrado)
 	if (nodo_encontrado)
 		return caso_clave_existente(nodo_encontrado, valor, encontrado);
 
-	return insertar_nodo(hash, nodo_anterior, indice, clave, valor,
+	char *copia_clave = malloc(strlen(clave) + 1);
+	if (!copia_clave)
+		return false;
+	strcpy(copia_clave, clave);
+
+	return insertar_nodo(hash, nodo_anterior, indice, copia_clave, valor,
 			     encontrado);
 }
 // --------------------------------------------------------------------------------------------------
@@ -311,6 +320,7 @@ void destruir_elementos(hash_t *hash, void (*destructor)(void *))
 			if (destructor)
 				destructor(nodo_actual->valor);
 
+			free(nodo_actual->clave);
 			free(nodo_actual);
 			hash->cantidad--;
 

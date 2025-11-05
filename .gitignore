@@ -9,3 +9,5 @@ pruebas_alumno
 .clang-format
 ejemplo
 shared.map
+tests
+programa

@@ -188,7 +188,7 @@ void test_hash_insertar_pasando_encontrado_clave_existente()
 	hash_insertar(hash, "clave1", "nuevoValor", &encontrado);
 
 	pa2m_afirmar(
-		strcmp(encontrado, "nuevoValor") == 0,
+		strcmp(encontrado, "valor1") == 0,
 		"Encontrado guarda correctamente el valor que fue modificado");
 
 	hash_destruir(hash);

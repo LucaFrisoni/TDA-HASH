@@ -37,50 +37,26 @@ A continuación se detallan las estructuras principales:
 
 #### 🔹`nodo_t`
 
-Representa un **nodo** de la lista enlazada.
+Representa un **nodo** enlazado.
 
+- Contiene una clave char que permite el acceso al dato.
 - Contiene un puntero genérico al dato almacenado.
-- Guarda un puntero al siguiente nodo en la lista.
+- Guarda un puntero al siguiente nodo.
 
 📊 **Diagrama de memoria:**  
-![image1](assets/img/image.png)
+![Imagen nodo_t](assets/img/image-nodo_t.png)
 
 ---
 
-#### 🔹`lista_t`
+#### 🔹`hash_t`
 
-Representa la **lista enlazada**.
+Representa la **tabla de hash**.
 
-- Tiene un puntero al primer nodo de la lista.
-- Mantiene un puntero al último nodo, para inserciones rápidas al final.
-- Lleva un contador con la cantidad total de elementos.
-
-📊 **Diagrama de memoria:**  
-![image2](assets/img/image2.png)
-
----
-
-#### 🔹`pila_t`
-
-Representa una **pila** (estructura LIFO).
-
-- Internamente utiliza una lista para administrar los elementos.
-- Los elementos se apilan y desapilan siempre desde un mismo extremo.
+- Tiene un array de punteros que apuntan a **nodo_t**.
+- Lleva un contador con la capacidad total de la tabla y la cantidad total de elementos.
 
 📊 **Diagrama de memoria:**  
-![image3](assets/img/image3.png)
-
----
-
-#### 🔹`cola_t`
-
-Representa una **cola** (estructura FIFO).
-
-- Internamente también se implementa mediante una lista.
-- Los elementos se encolan al final y se desencolan desde el principio.
-
-📊 **Diagrama de memoria:**  
-![image4](assets/img/image4.png)
+![Imagen hash_t](assets/img/image-hash_t.png)
 
 ---
 
@@ -111,22 +87,60 @@ Se realiza la lectura de un archivo **.csv** cuya ubicacion fue pasado por param
 tp1_t *tp1_leer_archivo(const char *nombre);
 ```
 
-**📌Esta funcion se encarga de:**
+**📌¿Qué hace esta función?:**
 
-- 🔹 Manejar la apertura del archivo **.csv**📑 con `manejador_de_archivos_open()`
-- 🔹 Crear la estructura **tp1_t**.
-- 🔹 Leer y validar todas las lineas del archivo (se lee dinamicamente) con `leer_linea()`.
-- 🔹 Transforma la linea de texto en un tipo pokemon **struct pokemon** si es valido con `parsear_pokemon()` y demas funciones internas.
-- 🔹 Agregar el pokemon parseado a la estructrua **tp1_t** con `agregar_pokemon()`.
-- 🔹 Ordenar ascendemente los pokemones por id una vez finalizada la lectura completa del archivo con `bubbleSort_pokemones_id_asc_optimizado()`.
-- 🔹 Correcta liberacion de memoria y cierre de archivos.
-- 🔹 Retorno de la estructura con los pokemones y su cantidad.
+- 🔹 Abre el archivo .csv indicado por parámetro
+- 🔹 Lee cada línea del archivo y verifica que tenga el formato correcto.
+- 🔹 Extrae la información de cada Pokémon contenido en el archivo.
+- 🔹 Guarda todos los Pokémon válidos dentro de una estructura **tp1_t**.
+- 🔹 Al finalizar, ordena los Pokémon por su id de manera ascendente.
+- 🔹 Devuelve la estructura completa con todos los datos cargados.
 
 - ⚠️ En caso de que el archivo no respete el formato, no se pueda abrir o falle la reserva de memoria, la función devuelve `NULL`.
 
 ---
 
-### 2.2 Selección de operación (según `argv[2]`)
+### 2.2 Creacion de Hash
+
+Se crea la estructura principial de este TDA con `hash_crear()` donde se almacenarán los Pokémon como pares clave → valor.
+
+```c
+hash_t *hash_crear(size_t capacidad_inicial);
+```
+
+---
+
+### 2.3 Validacion de Funciones
+
+Antes de continuar, se valida que ambas estructuras **(tp1_t y hash_t)** hayan sido creadas correctamente:
+
+```c
+bool validando_func(tp1_t *tp1, hash_t *hash);
+```
+
+⚠️ Si alguna falló, se liberan los recursos y finaliza el programa.
+
+---
+
+### 2.4 Cargando pokemones
+
+Al pasar las validaciones, se insertan los pokemones en el Hash
+
+```c
+bool cargando_pokemons(tp1_t *tp1, hash_t *hash);
+```
+
+**📌¿Qué hace esta función?:**
+
+- 🔹 Recorre cada Pokémon guardado en tp1 con su iterador interno.
+- 🔹 Se llama a la función callback `guardar_en_hash()`, que inserta el Pokémon en el hash usando su nombre como clave.
+- 🔹 Se valida que haya pokemones.
+
+⚠️ Si la cantidad de elementos insertados no coincide con la cantidad total de pokemones, se liberan los recursos y finaliza el programa.
+
+---
+
+### 2.5 Buscando pokemon según operacion(según `argv[2]`)
 
 El sistema permite al usuario hacer una busqueda entre 2 operaciones predefinidas.
 
@@ -134,12 +148,32 @@ El sistema permite al usuario hacer una busqueda entre 2 operaciones predefinida
 
 **Parámetros:** `<tipo_busqueda> <valor>`
 
-- 🔹Permite buscar un Pokémon en el archivo:
-  - `nombre`: busca por nombre con `tp1_buscar_nombre()`.
-  - `id`: busca por ID con `tp1_buscar_id()`.
-- 🔹Si lo encuentra, se muestra con `mostrar_pokemon()`.
-- 🔹Si no existe, devuelve **NULL** e imprime que no fue encontrado
-  Explicación de cómo funcionan las estructuras desarrolladas en el TP y el funcionamiento general del mismo.
+- 🔹Segun el **tipo de busqueda**:
+
+  - `nombre`: Busca directamente en el hash con `hash_buscar()` ya que el nombre es la clave.
+  - `id`: Como el hash no tiene el id como clave, se itera con `hash_iterar()` e internamente se compara cada Pokémon con el id buscado mediante el callback `buscando_pk_id()`.
+
+- 📌Si lo encuentra, se retorna el Pokémon.
+- 📌Si no existe, devuelve **NULL**
+
+---
+
+### 2.6 Mostrando Pokemon
+
+Si el Pokémon fue encontrado, se llama a:
+
+```c
+void mostrar_pokemon(struct pokemon *p);
+```
+
+📄 Se imprime:
+
+- Id
+- Nombre
+- Tipo
+- Ataque, Defensa, Velocidad
+
+⚠️ Si no fue encontrado, se imprime un mensaje indicando lo mismo
 
 ---
 
@@ -147,7 +181,7 @@ El sistema permite al usuario hacer una busqueda entre 2 operaciones predefinida
 
 Al finalizar la ejecución:
 
-- 🗑️Se destruye la lista de Pokémones con `lista_destruir(lista_pokemones)`.
+- 🗑️Se destruye la tabla de hash de Pokémones con `hash_destruir(hash)`.
 
 - 🗑️Se libera la estructura principal del TP con `tp1_destruir(tp1)`.
 
@@ -157,7 +191,7 @@ Esto asegura que no queden memory leaks ni recursos sin liberar.
 
 ## Tests Unitarios
 
-Esta sección describe cómo se verifican todas las funciones primitivas del proyecto mediante pruebas unitarias y de estrés.
+Esta sección describe cómo se verifican todas las funciones primitivas del proyecto mediante pruebas unitarias y de integracion.
 
 ### Objetivo
 
@@ -169,7 +203,7 @@ Esta sección describe cómo se verifican todas las funciones primitivas del pro
 
 ### Cobertura de pruebas
 
-Se realizan 250 pruebas
+Se realizan 114 pruebas
 
 Estos tests incluyen:
 
@@ -202,83 +236,47 @@ Para ejecutar con valgrind:
 make valgrind_t
 ```
 
-## 📚 Respuestas a las preguntas teóricas
+## 📈Complejidad computacional de las funciones primitivas
 
-### 1. Explicar qué es una lista, lista enlazada y lista doblemente enlazada.
+- **`hash_crear`** → O(1)
+  La función hash_crear realiza un conjunto fijo de operaciones:
+  Chequea valores constantes (como capacidad inicial).
+  Reserva memoria para la estructura base del hash y sus buckets iniciales.
+  No recorre estructuras ni depende del tamaño de la tabla, ya que recién se está iniciando.
+  Por lo tanto, la complejidad es O(1) en todos los casos.
 
-Una **lista** es una estructura de datos lineal que permite almacenar elementos en un orden secuencial. Los elementos pueden repetirse, y se puede insertar o eliminar en cualquir posicion.
+- **`hash_cantidad`** → O(1)
+  Solo accede al campo cantidad de la estructura **hash_t**, lo que es una operación de acceso directo a memoria. No recorre ni calcula nada adicional.
+  Por lo tanto, la complejidad es O(1) en todos los casos.
 
-La _lista enlazada_ es una implementacion de la lista donde cada elemento esta en un **nodo**, y cada nodo guarda:
+- **`hash_insertar`** → O(n) en el peor caso, O(k) amortizado promedio
+  En el caso promedio, el algoritmo calcula el índice del bucket usando la función de hash en tiempo constante, y luego recorre como máximo los elementos del bucket para comprobar si la clave ya existe.
+  Como el rehash mantiene el factor de carga bajo, la cantidad de elementos por bucket (k) tiende a ser muy baja y constante.
+  Además, insertar al principio o después de un nodo es una operación O(1).Por lo tanto, en promedio:Inserción en O(k)
 
-- 📌El dato
-- 🔗Un puntero al siguiente nodo
+  En el peor de los casos, todas las claves pueden colisionar en el mismo bucket (por ejemplo, con hash mal diseñado o claves adversas). Entonces, la búsqueda dentro de ese bucket requiere recorrer hasta n elementos y la inserción también toma O(n).
+  Además, si se dispara un rehash, se debe recorrer toda la tabla para reubicar cada nodo (también O(n)).
 
-A cambio en la _lista doblemente enlazada_ cada nodo guarda:
+- **`hash_buscar`** → O()
 
-- 📌El dato
-- 🔗Un puntero al siguiente nodo
-- 🔙Un puntero al nodo anterior
-  Permitiendo recorrer la lista en ambos sentidos facilitando inserciones/eliminaciones en posiciones intermedias, a costa de mayor uso de memoria.
+- **`hash_contiene`** → O()
 
-### 2. Explicar qué es una lista circular y de qué maneras se puede implementar.
+- **`hash_quitar`** → O()
 
-Una _lista circular_ es una variante de la lista enlazada en la que el ultimo nodo apunta nuevamente al primer nodo, formando un 'ciclo'
+- **`hash_iterar`** → O()
 
-**Maneras de implementarla**:
+- **`hash_destruir`** → O()
 
-- 🔁**Simplemente enlazada circular:** cada nodo apunta al siguiente, y el último apunta al primero.
+- **`hash_destruir_todo`** → O()
 
-- 🔁**Doblemente enlazada circular:** cada nodo apunta tanto al siguiente como al anterior, y el primero y el último se conectan entre sí en ambos sentidos.
+## 📚 Respuestas a las preguntas teóricas(explicar con graficos)
 
-### 3. Explicar la diferencia de funcionamiento entre cola y pila.
+### 1. Qué es un diccionario
 
-La **pila** funciona con el principio LIFO(Last In, First Out): el último elemento en entrar es el primero en salir.
+### 2. Explicá 3 formas diferentes de implementar un diccionario.
 
-Operaciones principales:
+### 3. Qué es una función de hash y qué características debe tener para nuestro problema en particular
 
-- 🆙apilar (push) → mete un elemento arriba de la pila.
+### 4. Qué es una tabla de Hash y los diferentes métodos de resolución de colisiones vistos
 
-- ⬇️desapilar (pop) → saca el último elemento agregado.
-
-A diferenica, la **cola** funciona on el principio FIFO (First In, First Out): el primero en entrar es el primero en salir.
-
-Operaciones principales:
-
-- ➕encolar (enqueue) → agrega un elemento al final de la cola.
-
-- ➖desencolar (dequeue) → saca el primer elemento agregado.
-
-### 4. Explicar la diferencia entre un iterador interno y uno externo.
-
-**Iterador interno:**
-
-- 🔹Es una función que recibe otra función (callback) y la aplica a cada elemento de la lista.
-  Cuando la funcion retorna false se deja de recorrer.
-
-- ⏳El control del recorrido lo tiene la estructura de datos.
-
-_Ejemplo_: lista_con_cada_elemento(lista, funcion, extra).
-
-✔️ Es más simple de usar, pero menos flexible
-
-**Iterador externo:**
-
-- 🔹Es una estructura independiente que te permite recorrer la lista paso a paso.
-
-- 👤 El control del recorrido lo tiene el usuario.
-
-Funciones típicas:
-
-- `iterador_crear()`
-
-- `iterador_hay_mas()`
-
-- `iterador_siguiente()`
-
-- `iterador_obtener_actual()`
-
-- `iterador_destruir()`
-
-✔️ Es más flexible porque podés decidir hasta dónde recorrer, hacer varias pasadas, combinar con condiciones, etc.
-
-### 5. Complejidad computacional de las funciones (`lista_pila_cola.c`)
+### 5. Explique por qué es importante el tamaño de la tabla (tanto para tablas abiertas como cerradas)

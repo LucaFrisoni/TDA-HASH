@@ -543,10 +543,10 @@ size_t tp1_con_cada_pokemon(tp1_t *un_tp, bool (*f)(struct pokemon *, void *),
 		return 0;
 
 	for (i = 0; i < un_tp->cantidad; i++) {
+		bool ok = f(un_tp->pokemones[i], extra);
 		count++;
-		if (!f(un_tp->pokemones[i], extra)) {
-			break;
-		}
+		if (!ok)
+			return count;
 	}
 	return count;
 }

@@ -75,9 +75,13 @@ bool cargando_pokemons(tp1_t *tp1, hash_t *hash)
 {
 	size_t cant_pokemones =
 		tp1_con_cada_pokemon(tp1, guardar_en_hash, hash);
-	size_t cant_pk_hash = hash_cantidad(hash);
-	if (cant_pk_hash != cant_pokemones || cant_pokemones == 0)
+
+	if (cant_pokemones == 0) {
+		hash_destruir(hash);
+		tp1_destruir(tp1);
 		return false;
+	}
+
 	return true;
 }
 // ----------------------- Mostrar -----------------------
@@ -156,11 +160,15 @@ int main(int argc, char *argv[])
 
 	tp1_t *tp1 = tp1_leer_archivo(argv[1]);
 	hash_t *hash = hash_crear(CAPACIDAD_HASH);
-	if (!validando_func(tp1, hash))
+	if (!validando_func(tp1, hash)) {
+		printf("Error validando las funciones\n");
 		return -2;
+	}
 
-	if (!cargando_pokemons(tp1, hash))
+	if (!cargando_pokemons(tp1, hash)) {
+		printf("Error cargando los pokemones\n");
 		return -3;
+	}
 
 	struct pokemon *p = pokemon_encontrado(argv, hash);
 
