@@ -253,6 +253,7 @@ void *quitando_nodo_y_devolviendo_valor(hash_t *hash, size_t indice,
 		hash->buckets[indice] = nodo_encontrado->siguiente;
 
 	void *valor = nodo_encontrado->valor;
+	free(nodo_encontrado->clave);
 	free(nodo_encontrado);
 	hash->cantidad--;
 	return valor;

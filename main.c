@@ -18,17 +18,7 @@ bool guardar_en_hash(struct pokemon *poke, void *extra)
 	return hash_insertar(hash, poke->nombre, poke, NULL);
 }
 // ----------------------- Validaciones -----------------------
-bool validando_formato_csv(const char *archivo)
-{
-	if (!archivo)
-		return false;
 
-	const char *ext = strrchr(archivo, '.');
-	if (!ext || strcmp(ext, ".csv") != 0)
-		return false;
-
-	return true;
-}
 
 bool validando_params(int argc, char *argv[])
 {
@@ -40,10 +30,7 @@ bool validando_params(int argc, char *argv[])
 		printf("Solo 5 parametros permitidos <ejecutable> <archivo_pokemones.csv> buscar nombre|id <valor>\n");
 		return false;
 	}
-	if (!validando_formato_csv(argv[NUM_PARAMETRO_ARCHIVO])) {
-		printf("El archivo pasado debe de estar en formato 'csv'\n");
-		return false;
-	}
+	
 	if (strcmp(argv[NUM_PARAMETRO_OPERACION], "buscar") != 0) {
 		printf("El tercer argumento debe ser 'buscar'\n");
 		return false;

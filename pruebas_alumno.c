@@ -105,6 +105,7 @@ void test_hash_insertar_inserta_correctamente_hash_varios_elementos()
 
 	pa2m_afirmar(hash_cantidad(hash) == 3,
 		     "Se pueden insertar múltiples elementos en un hash");
+	hash_destruir(hash);
 }
 void test_hash_insertar_inserta_correctamente_coliciones()
 {
@@ -811,10 +812,12 @@ void tests_hash_quitar_prueba_estres()
 		sprintf(clave, "key_%zu", i);
 
 		int *valor_obtenido = hash_quitar(hash, clave);
+		
 		if (!valor_obtenido || *valor_obtenido != valor_esperado) {
 			todo_ok = false;
 			break;
 		}
+		free(valor_obtenido);
 	}
 
 	pa2m_afirmar(
@@ -1422,7 +1425,7 @@ void test_integracion_quitar_elemento_colicionado()
 	int *valor_quitado = hash_quitar(hash, "a");
 	pa2m_afirmar(*valor_quitado == 1,
 		     "Se quitan correctamente elementos colisionados");
-
+	
 	hash_destruir(hash);
 }
 void test_integracion_quitar_modificacion_valor_correctamente()
